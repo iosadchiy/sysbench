@@ -27,6 +27,9 @@
 #include "sysbench.h"
 #include "sb_ck_pr.h"
 #include "sb_rand.h"
+#include "chan.h"
+
+chan_t *chan;
 
 typedef struct
 {
@@ -89,6 +92,8 @@ int register_test_ipi(sb_list_t *tests)
 int ipi_init(void)
 {
   unsigned int i;
+
+  chan = chan_init(0);
   
   mutex_num = sb_get_value_int("mutex-num");
   mutex_loops = sb_get_value_int("mutex-loops");
@@ -186,9 +191,18 @@ int ipi_execute_event(sb_event_t *sb_req, int thread_id)
     for (i = 0; i < mutex_req->nloops; i++)
       ck_pr_barrier();
 
-    pthread_mutex_lock(&thread_locks[current_lock].mutex);
-    global_var += global_var*sb_rand_uniform(0,10);
-    pthread_mutex_unlock(&thread_locks[current_lock].mutex);
+    // pthread_mutex_lock(&thread_locks[current_lock].mutex);
+    // global_var += global_var*sb_rand_uniform(0,10);
+    // pthread_mutex_unlock(&thread_locks[current_lock].mutex);
+
+    void *msg;
+    int x;
+    if (thread_id % 2 == 0) {
+      chan_recv(chan, msg);
+    } else {
+      x = sb_rand_uniform(0,100);
+      chan_send(chan, &x);
+    }
 
     mutex_req->nlocks--;
   }
