@@ -130,7 +130,9 @@ static int ipi_thread_run(int thread_id)
   pthread_t thread;
   thread = pthread_self();
   CPU_ZERO(&cpuset);
-  CPU_SET(thread_id, &cpuset);
+  if (mutex_num == 1) CPU_SET(0, &cpuset);
+  else if (mutex_num == 2) CPU_SET(thread_id, &cpuset);
+  else exit;
   pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
 
   while (sb_more_events(thread_id) && rc == 0)
@@ -162,7 +164,7 @@ sb_event_t ipi_next_event(int thread_id)
     sb_req.type = SB_REQ_TYPE_NULL;
   else
   {
-    sb_req.type = SB_REQ_TYPE_MUTEX;
+    sb_req.type = SB_REQ_TYPE_IPI;
     mutex_req->nlocks = mutex_locks;
     mutex_req->nloops = mutex_loops;
   }
@@ -177,11 +179,9 @@ int ipi_execute_event(sb_event_t *sb_req, int thread_id)
   unsigned int         current_lock;
   sb_mutex_request_t   *mutex_req = &sb_req->u.mutex_request;
 
-  (void) thread_id; /* unused */
-
   do
   {
-    current_lock = sb_rand_uniform(0, mutex_num - 1);
+    current_lock = 0;
 
     for (i = 0; i < mutex_req->nloops; i++)
       ck_pr_barrier();
@@ -189,6 +189,7 @@ int ipi_execute_event(sb_event_t *sb_req, int thread_id)
     pthread_mutex_lock(&thread_locks[current_lock].mutex);
     global_var += global_var*sb_rand_uniform(0,10);
     pthread_mutex_unlock(&thread_locks[current_lock].mutex);
+
     mutex_req->nlocks--;
   }
   while (mutex_req->nlocks > 0);
