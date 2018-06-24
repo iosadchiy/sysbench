@@ -23,6 +23,7 @@ autom4te.cache
 /src/tests/fileio/.deps
 /src/tests/memory/.deps
 /src/tests/mutex/.deps
+/src/tests/ipi/.deps
 /src/tests/oltp/.deps
 /src/tests/threads/.deps
 /TAGS
@@ -38,6 +39,7 @@ autom4te.cache
 /src/tests/fileio/TAGS
 /src/tests/memory/TAGS
 /src/tests/mutex/TAGS
+/src/tests/ipi/TAGS
 /src/tests/oltp/TAGS
 /src/tests/threads/TAGS
 /config/compile

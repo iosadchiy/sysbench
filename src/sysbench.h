@@ -43,6 +43,7 @@
 #include "tests/sb_memory.h"
 #include "tests/sb_threads.h"
 #include "tests/sb_mutex.h"
+#include "tests/sb_ipi.h"
 
 /* Macros to control global execution mutex */
 #define SB_THREAD_MUTEX_LOCK() pthread_mutex_lock(&sb_globals.exec_mutex) 
@@ -62,6 +63,7 @@ typedef enum
   SB_REQ_TYPE_SQL,
   SB_REQ_TYPE_THREADS,
   SB_REQ_TYPE_MUTEX,
+  SB_REQ_TYPE_IPI,
   SB_REQ_TYPE_SCRIPT
 } sb_event_type_t;
 

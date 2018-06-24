@@ -15,6 +15,7 @@ description: |
  - memory: a memory access benchmark
  - threads: a thread-based scheduler benchmark
  - mutex: a POSIX mutex benchmark
+ - ipi: IPI bench
 
 grade: stable
 confinement: classic

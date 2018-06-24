@@ -36,7 +36,7 @@ typedef struct
 
 
 /* Mutex test arguments */
-static sb_arg_t mutex_args[] =
+static sb_arg_t ipi_args[] =
 {
   SB_OPT("mutex-num", "total size of mutex array", "4096", INT),
   SB_OPT("mutex-locks", "number of mutex locks to do per thread", "50000", INT),
@@ -47,24 +47,26 @@ static sb_arg_t mutex_args[] =
 };
 
 /* Mutex test operations */
-static int mutex_init(void);
-static void mutex_print_mode(void);
-static sb_event_t mutex_next_event(int);
-static int mutex_execute_event(sb_event_t *, int);
-static int mutex_done(void);
+static int ipi_init(void);
+static int ipi_thread_run(int);
+static void ipi_print_mode(void);
+static sb_event_t ipi_next_event(int);
+static int ipi_execute_event(sb_event_t *, int);
+static int ipi_done(void);
 
-static sb_test_t mutex_test =
+static sb_test_t ipi_test =
 {
   .sname = "ipi",
   .lname = "Inter-processor interrupts performance test",
   .ops = {
-     .init = mutex_init,
-     .print_mode = mutex_print_mode,
-     .next_event = mutex_next_event,
-     .execute_event = mutex_execute_event,
-     .done = mutex_done
+     .init = ipi_init,
+     .thread_run = ipi_thread_run,
+     .print_mode = ipi_print_mode,
+     .next_event = ipi_next_event,
+     .execute_event = ipi_execute_event,
+     .done = ipi_done
   },
-  .args = mutex_args
+  .args = ipi_args
 };
 
 
@@ -78,13 +80,13 @@ static TLS int tls_counter;
 
 int register_test_ipi(sb_list_t *tests)
 {
-  SB_LIST_ADD_TAIL(&mutex_test.listitem, tests);
+  SB_LIST_ADD_TAIL(&ipi_test.listitem, tests);
 
   return 0;
 }
 
 
-int mutex_init(void)
+int ipi_init(void)
 {
   unsigned int i;
   
@@ -106,7 +108,7 @@ int mutex_init(void)
 }
 
 
-int mutex_done(void)
+int ipi_done(void)
 {
   unsigned int i;
 
@@ -117,8 +119,38 @@ int mutex_done(void)
   return 0;
 }
 
+static int ipi_thread_run(int thread_id)
+{
+  sb_test_t *test = &ipi_test;
 
-sb_event_t mutex_next_event(int thread_id)
+  sb_event_t        event;
+  int               rc = 0;
+
+  cpu_set_t cpuset;
+  pthread_t thread;
+  thread = pthread_self();
+  CPU_ZERO(&cpuset);
+  CPU_SET(thread_id, &cpuset);
+  pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+
+  while (sb_more_events(thread_id) && rc == 0)
+  {
+    event = test->ops.next_event(thread_id);
+    if (event.type == SB_REQ_TYPE_NULL)
+      break;
+
+    sb_event_start(thread_id);
+
+    rc = test->ops.execute_event(&event, thread_id);
+
+    sb_event_stop(thread_id);
+  }
+
+  return rc;
+}
+
+
+sb_event_t ipi_next_event(int thread_id)
 {
   sb_event_t         sb_req;
   sb_mutex_request_t   *mutex_req = &sb_req.u.mutex_request;
@@ -139,7 +171,7 @@ sb_event_t mutex_next_event(int thread_id)
 }
 
 
-int mutex_execute_event(sb_event_t *sb_req, int thread_id)
+int ipi_execute_event(sb_event_t *sb_req, int thread_id)
 {
   unsigned int         i;
   unsigned int         current_lock;
@@ -155,7 +187,7 @@ int mutex_execute_event(sb_event_t *sb_req, int thread_id)
       ck_pr_barrier();
 
     pthread_mutex_lock(&thread_locks[current_lock].mutex);
-    global_var++;
+    global_var += global_var*sb_rand_uniform(0,10);
     pthread_mutex_unlock(&thread_locks[current_lock].mutex);
     mutex_req->nlocks--;
   }
@@ -165,7 +197,7 @@ int mutex_execute_event(sb_event_t *sb_req, int thread_id)
 }
 
 
-void mutex_print_mode(void)
+void ipi_print_mode(void)
 {
   log_text(LOG_INFO, "Doing mutex performance test");
 }

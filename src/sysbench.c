@@ -447,6 +447,7 @@ static int register_tests(void)
     + register_test_memory(&tests)
     + register_test_threads(&tests)
     + register_test_mutex(&tests)
+    + register_test_ipi(&tests)
     + db_register()
     + sb_rand_register()
     ;
